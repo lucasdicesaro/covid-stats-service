@@ -15,6 +15,10 @@ Error
 - 404 Not found
 */
 router.get('/total', (req, res) => {
+    console.log('createdDate: ' + req.query.createdDate)
+    console.log('age: ' + req.query.age)
+    console.log('genre: ' + req.query.genre)
+    console.log('state: ' + req.query.state)
     res.json({ message: 'GET /total' })
 })
 

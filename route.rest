@@ -1,4 +1,4 @@
-GET http://localhost:3000/covid/total
+GET http://localhost:3000/covid/total?createdDate=2021-02-22&age=65&genre=masculino&state=LaPampa
 
 ###
 
