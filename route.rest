@@ -1,5 +1,27 @@
+GET http://localhost:3000/covid/
+
+###
+
+POST http://localhost:3000/covid
+Content-Type: application/json
+
+{
+    "eventId": 998584,
+    "createdDate": "2021-01-15",
+    "age": 65,
+    "genre": "M",
+    "state": "Buenos Aires",
+    "deceased": "NO"
+}
+###
+
+DELETE http://localhost:3000/covid/6043b015df31f23215230c2f
+
+###
+
 GET http://localhost:3000/covid/total?createdDate=2021-02-22&age=65&genre=masculino&state=LaPampa
 
 ###
 
 GET http://localhost:3000/covid/deaths
+
