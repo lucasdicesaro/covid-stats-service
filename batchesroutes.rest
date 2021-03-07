@@ -1,0 +1,16 @@
+GET http://localhost:3000/batches
+
+###
+
+POST http://localhost:3000/batches
+Content-Type: application/json
+
+{
+    "executionDate": "2021-01-15",
+    "lastEventId": 998584,
+    "deltaSize": 40
+}
+
+###
+
+DELETE http://localhost:3000/batches/60442bc83d0f424719ca3241

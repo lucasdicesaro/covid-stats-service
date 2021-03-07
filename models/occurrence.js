@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 
 const occurrenceSchema = new mongoose.Schema({
-    createdDate: {
+    symptomDate: {
         type: Date,
         required: true
     },

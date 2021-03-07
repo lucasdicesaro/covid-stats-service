@@ -11,6 +11,7 @@ This API provides useful stats about COVID.
 ## Required Node libraries
 - express
 - mongoose
+- csv-parser
 - dotenv (just for dev)
 - nodemon (just for dev)
 

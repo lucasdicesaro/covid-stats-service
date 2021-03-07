@@ -14,4 +14,10 @@ app.use(express.json())
 const covidRouter = require('./routes/covid')
 app.use('/covid', covidRouter)
 
+const occurrenceRouter = require('./routes/occurrences')
+app.use('/occurrences', occurrenceRouter)
+
+const batchRouter = require('./routes/batches')
+app.use('/batches', batchRouter)
+
 app.listen(3000, () => console.log('Server Started'))
