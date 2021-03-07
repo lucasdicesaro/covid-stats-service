@@ -13,4 +13,8 @@ Content-Type: application/json
 
 ###
 
-DELETE http://localhost:3000/batches/60442bc83d0f424719ca3241
+DELETE http://localhost:3000/batches/one/60442bc83d0f424719ca3241
+
+###
+
+DELETE http://localhost:3000/batches/all

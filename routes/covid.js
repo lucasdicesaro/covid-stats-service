@@ -17,32 +17,67 @@ const DECEASE = "fallecido"
 
 router.get("/total", async (req, res) => {
 
-    const occurrences = await Occurrence.findOne({
-        symptomDate: {
-            $gte: req.query.symptomDateFrom,
-            $lte: req.query.symptomDateTo
-        },
-        age: {
-            $gte: req.query.ageFrom,
-            $lte: req.query.ageTo
-        },
-        genre: req.query.genre,
-        state: req.query.state
-    }, function (err, filteredOccurrences) {
+    var query = Occurrence.find();
+
+    if (req.query.symptomDateFrom != null) {
+        query.where('symptomDate').gte(req.query.symptomDateFrom);
+    }
+    if (req.query.symptomDateTo != null) {
+        query.where('symptomDate').lte(req.query.symptomDateTo);
+    }
+    if (req.query.ageFrom != null) {
+        query.where('age').gte(req.query.ageFrom);
+    }
+    if (req.query.ageTo != null) {
+        query.where('age').lte(req.query.ageTo);
+    }
+    if (req.query.genre != null) {
+        query.where('genre').equals(req.query.genre);
+    }
+    if (req.query.state != null) {
+        query.where('state').equals(req.query.state);
+    }
+
+    await query.exec(function (err, count) {
         if (err) return handleError(err)
 
-        return filteredOccurrences
+        // TODO Should I move this?
+        res.json(count)
     })
-
-    // TODO Send count
-    res.json(occurrences)
 });
 
-// TODO Copy same previous behavior, but filtering by "deceased": "SI"
-router.get("/deaths", (req, res) => {
-    res.json({ message: "GET /deaths" });
-});
+router.get("/deaths", async (req, res) => {
 
+    // TODO Refactor this duplicated block
+    var query = Occurrence.find();
+
+    if (req.query.symptomDateFrom != null) {
+        query.where('symptomDate').gte(req.query.symptomDateFrom);
+    }
+    if (req.query.symptomDateTo != null) {
+        query.where('symptomDate').lte(req.query.symptomDateTo);
+    }
+    if (req.query.ageFrom != null) {
+        query.where('age').gte(req.query.ageFrom);
+    }
+    if (req.query.ageTo != null) {
+        query.where('age').lte(req.query.ageTo);
+    }
+    if (req.query.genre != null) {
+        query.where('genre').equals(req.query.genre);
+    }
+    if (req.query.state != null) {
+        query.where('state').equals(req.query.state);
+    }
+    query.where('deceased').equals('SI');
+
+    await query.exec(function (err, count) {
+        if (err) return handleError(err)
+
+        // TODO Should I move this?
+        res.json(count)
+    })
+});
 
 router.get("/update", async (req, res) => {
     const batch = await Batch.find({}).sort({_id:-1}).limit(1)
@@ -52,66 +87,73 @@ router.get("/update", async (req, res) => {
 
 router.post("/update", (req, res) => {
 
-    // TODO Get file from salud.gov.ar
+    // TODO Replace this mock file with downloaded file from salud.gov.ar 
+    const csvfile = path.resolve(__dirname, "../Random5Covid19Casos.csv");
+
     // TODO First time, truncate last 1000 occurences.
     // TODO Retrieve last Batch and get lastEventId value, in order to use it to filter news
 
     let currentLastEventId
     let currentDeltaSize = 0
 
-    // TODO Replace this mock file by fresh download csv
-    const csvfile = path.resolve(__dirname, "../Random5Covid19Casos.csv");
     fs.createReadStream(csvfile)
         .on('error', () => {
             // handle error
+            console.error(error.message)
         })
         .pipe(csv())
         .on('data', (row) => {
             //console.log(row);
-
-            // TODO Save only news
-
-            var occurrence = new Occurrence({
-                eventId: row[EVENT_ID],
-                genre: row[GENRE],
-                age: row[AGE],
-                state: row[STATE],
-                symptomDate: row[SYMPTOM_DATE],
-                deceased: row[DECEASE]
-            });
-
-            occurrence.save(function (error) {
-                console.log(occurrence);
-                if (error) {
-                    throw error;
-                }
-            });
+            saveOccurence(row)
 
             // Save last processed EventId
-            currentLastEventId=occurrence.eventId
-            // Increasing processed records
+            currentLastEventId=row[EVENT_ID]
+            // Count processed records
             currentDeltaSize++;
         })
         .on('end', () => {
             // handle end of CSV
-            console.log("End of file import. Creating news summary");
-
-            var batch = new Batch({
-                executionDate: new Date(),
-                lastEventId: currentLastEventId,
-                deltaSize: currentDeltaSize
-            });
-
-            batch.save(function (error) {
-                console.log(batch);
-                if (error) {
-                    throw error;
-                }
-            });
-
+            console.log("End of csv file import. Creating news summary...");
+            saveBatch(currentLastEventId, currentDeltaSize)
         })
 
     res.json({ message: "Data imported successfully." });
 });
+
+
+
+async function saveOccurence (row) {
+    var occurrence = new Occurrence({
+        eventId: row[EVENT_ID],
+        genre: row[GENRE],
+        age: row[AGE],
+        state: row[STATE],
+        symptomDate: row[SYMPTOM_DATE],
+        deceased: row[DECEASE]
+    });
+
+    occurrence.save(function (error) {
+        if (error) {
+            throw error;
+        }
+        console.log('Occurrence saved successfully: ' + occurrence);
+    });
+}
+
+
+async function saveBatch (currentLastEventId, currentDeltaSize) {
+    var batch = new Batch({
+        executionDate: new Date(),
+        lastEventId: currentLastEventId,
+        deltaSize: currentDeltaSize
+    });
+
+    await batch.save(function (error) {
+        if (error) {
+            throw error;
+        }
+        console.log('Batch saved successfully: ' + batch);
+    });
+}
 
 module.exports = router;

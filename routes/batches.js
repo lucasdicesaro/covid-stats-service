@@ -23,17 +23,27 @@ router.post('/', async (req, res) => {
         res.json(newBatch)
     } catch (error) {
         // TODO double check error code
-        res.status(500).json({ message: error.message})
+        res.status(500).json({ message: error.message })
     }
 })
 
 // Delete batch
-router.delete('/:id', getBatch, async (req, res) => {
+router.delete('/one/:id', getBatch, async (req, res) => {
     try {
         await res.batch.remove()
         res.json({ message: 'Batch deleted'})
     } catch (error) {
-        res.status(500).json({ message: error.message})
+        res.status(500).json({ message: error.message })
+    }
+})
+
+// Delete all
+router.delete('/all', async (req, res) => {
+    try {
+        await Batch.deleteMany({})
+        res.json({ message: 'Batches deleted'})
+    } catch (error) {
+        res.status(500).json({ message: error.message })
     }
 })
 
@@ -42,7 +52,7 @@ async function getBatch(req, res, next) {
     try {
         batch = await Batch.findById(req.params.id)
         if (batch == null) {
-            return res.status(404).json({ message: 'Cannot find occurence' })
+            return res.status(404).json({ message: 'Cannot find batch' })
         }
     } catch (error) {
         return res.status(500).json({ message: error.message })
