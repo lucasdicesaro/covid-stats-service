@@ -17,24 +17,24 @@ const DECEASE = "fallecido"
 
 router.get("/total", async (req, res) => {
 
-    const occurrences = await Occurrence.findOne(
-        {
-            symptomDate: {
-                $gte: req.query.symptomDateFrom,
-                $lte: req.query.symptomDateTo
-            },
-            age: {
-                $gte: req.query.ageFrom,
-                $lte: req.query.ageTo
-            },
-            genre: req.query.genre,
-            state: req.query.state
-        }, function (err, filteredOccurrences) {
-            if (err) return handleError(err)
+    const occurrences = await Occurrence.findOne({
+        symptomDate: {
+            $gte: req.query.symptomDateFrom,
+            $lte: req.query.symptomDateTo
+        },
+        age: {
+            $gte: req.query.ageFrom,
+            $lte: req.query.ageTo
+        },
+        genre: req.query.genre,
+        state: req.query.state
+    }, function (err, filteredOccurrences) {
+        if (err) return handleError(err)
 
-            return filteredOccurrences
-        })
+        return filteredOccurrences
+    })
 
+    // TODO Send count
     res.json(occurrences)
 });
 
@@ -44,8 +44,9 @@ router.get("/deaths", (req, res) => {
 });
 
 
-router.get("/update", (req, res) => {
-    res.json({ message: "GET /covid/update" });
+router.get("/update", async (req, res) => {
+    const batch = await Batch.find({}).sort({_id:-1}).limit(1)
+    res.json(batch)
 });
 
 
