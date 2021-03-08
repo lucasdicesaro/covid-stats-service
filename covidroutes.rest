@@ -1,8 +1,8 @@
-GET http://localhost:3000/covid/total?symptomDateFrom=2020-05-29&symptomDateTo=2020-05-31&ageFrom=65&ageTo=83&genre=M&state=Buenos%20Aires
+GET http://localhost:3000/covid/total?symptomDateFrom=2020-05-15&symptomDateTo=2020-06-13&ageFrom=24&ageTo=83&genre=M&state=Buenos%20Aires
 
 ###
 
-GET http://localhost:3000/covid/deaths
+GET http://localhost:3000/covid/deaths?symptomDateFrom=2020-05-15&symptomDateTo=2020-06-13&ageFrom=24&ageTo=83&genre=M&state=Buenos%20Aires
 
 ###
 

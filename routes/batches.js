@@ -22,8 +22,8 @@ router.post('/', async (req, res) => {
         const newBatch = await batch.save()
         res.json(newBatch)
     } catch (error) {
-        // TODO double check error code
-        res.status(500).json({ message: error.message })
+        // 400 Assuming user input errors
+        res.status(400).json({ message: error.message })
     }
 })
 

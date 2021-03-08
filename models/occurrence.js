@@ -11,7 +11,7 @@ const occurrenceSchema = new mongoose.Schema({
     },
     age: {
         type: Number,
-        required: true
+        required: false // some rows has empty age
     },
     genre: {
         type: String,
@@ -22,7 +22,7 @@ const occurrenceSchema = new mongoose.Schema({
         required: true
     },
     deceased: {
-        type: String, // TODO change it to Boolean, after file convertion
+        type: String,
         required: true
     }
 })

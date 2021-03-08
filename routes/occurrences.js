@@ -25,8 +25,8 @@ router.post('/', async (req, res) => {
         const newOccurrence = await occurrence.save()
         res.json(newOccurrence)
     } catch (error) {
-        // TODO double check error code
-        res.status(500).json({ message: error.message })
+        // 400 Assuming user input errors
+        res.status(400).json({ message: error.message })
     }
 })
 
@@ -34,18 +34,17 @@ router.post('/', async (req, res) => {
 router.delete('/one/:id', getOccurrence, async (req, res) => {
     try {
         await res.occurrence.remove()
-        res.json({ message: 'Occurrence deleted'})
+        res.json({ message: 'Occurrence deleted' })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }
 })
 
-// TODO Remove this endpoint
 // Delete all
 router.delete('/all', async (req, res) => {
     try {
         await Occurrence.deleteMany({})
-        res.json({ message: 'Occurrences deleted'})
+        res.json({ message: 'Occurrences deleted' })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }

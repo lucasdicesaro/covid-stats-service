@@ -7,7 +7,7 @@ const https = require('https');
 const csv = require('csv-parser');
 const path = require("path");
 const firstline = require('firstline');
-const readLastLine = require('read-last-line');
+const readLastLines = require('read-last-lines');
 const stringSanitizer = require("string-sanitizer");
 
 
@@ -21,7 +21,7 @@ const DECEASE = "fallecido"
 
 router.get("/total", async (req, res) => {
 
-    var query = Occurrence.find();
+    var query = Occurrence.countDocuments();
 
     if (req.query.symptomDateFrom != null) {
         query.where('symptomDate').gte(req.query.symptomDateFrom);
@@ -53,7 +53,7 @@ router.get("/total", async (req, res) => {
 router.get("/deaths", async (req, res) => {
 
     // TODO Refactor this duplicated block
-    var query = Occurrence.find();
+    var query = Occurrence.countDocuments();
 
     if (req.query.symptomDateFrom != null) {
         query.where('symptomDate').gte(req.query.symptomDateFrom);
@@ -91,43 +91,11 @@ router.get("/update", async (req, res) => {
 
 router.post("/update", async (req, res) => {
 
-    // TODO Remove this line and uncomment next block
-    const csvfileAllCases = path.resolve(__dirname, "../tmp/Last50Covid19Casos.csv")
+    const lastNlines = 1000
+    // Retrieve and generate last cases
+    const csvFileLastCases = await getCsvFileLastCases(lastNlines)
 
-    // Downdloads and saves a local copy
-    //const csvfileAllCases = path.resolve(__dirname, "../tmp/Covid19Casos.csv");
-    // TODO Uncomment to download remote csv. Try it with await
-    //const request = https.get("https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv", function(response) {
-    //    console.log('Downloading csv file...')
-    //    response.pipe(fs.createWriteStream(csvfileAllCases))
-    //})
-
-    const csvfileLastCases = path.resolve(__dirname, "../tmp/LastCovid19Casos.csv")
-
-    // CSV Headers
-    const csvHeaders = await firstline(csvfileAllCases)
-    //console.log(csvHeaders);
-    await fs.writeFile(csvfileLastCases, csvHeaders, 'utf8', (err) => {
-        if (err) throw err
-        console.log('Header saved!')
-    });
-
-    // Truncates last N lines.
-    const lastNlines = 20
-    // TODO This is breaking file encoding. Change this solution
-    const lines = await readLastLine.read(csvfileAllCases, lastNlines).then(function (lines) {
-        return lines
-    }).catch(function (err) {
-        console.log(err.message)
-    });
-    //console.log(lines)
-    await fs.appendFile(csvfileLastCases, lines, 'utf8', (err) => {
-        if (err) throw err
-
-        console.log('Last-occurences-file saved!')
-    });
-
-    // Find is a previous Batch exists
+    // Check if a previous Batch already exists
     const batch = await findLastBatch()
     let previousLastEventId = null
     if (batch != null) {
@@ -141,52 +109,96 @@ router.post("/update", async (req, res) => {
     let currentDeltaSize = 0
 
     // Saves only news to database
-    fs.createReadStream(csvfileLastCases)
-        .on('error', () => {
-            console.error(error.message)
+    fs.createReadStream(csvFileLastCases)
+        .on('error', (err) => {
+            console.error(err.message)
         })
         .pipe(csv())
         .on('data', (row) => {
-            //console.log(row);
+
+            // Fixes Mongoose Nan validation on perstist. Error message:
+            // 'CastError: Cast to Number failed for value "\n"999975"" at path "eventId"'
             const currentEventId = stringSanitizer.sanitize(row[EVENT_ID])
             row[EVENT_ID] = currentEventId
 
             if (currentEventId == '') return; // Ignoring empty rows...
 
-            // Check only greater eventId's
+            // Processing only greater eventId's values
             if (previousLastEventId == null || currentEventId > previousLastEventId) {
-                console.log('EventId: ' + currentEventId + ' not processed yet. Inserting row...')
+                console.log('EventId: [' + currentEventId + '] not processed yet. Inserting row...')
+
+                // Persist Occurrence
                 saveOccurence(row)
 
-                // Save last processed EventId
-                currentLastEventId=currentEventId
+                // Keep last EventId
+                currentLastEventId = currentEventId
                 // Count processed records
                 currentDeltaSize++
             } else {
-                console.log('EventId: [' + currentEventId + '] already processed. previousLastEventId: ' + previousLastEventId + '. Ignoring row...')
+                console.log('EventId: [' + currentEventId + '] already processed. previousLastEventId: [' + previousLastEventId + ']. Ignoring row...')
             }
         })
         .on('end', () => {
             // Only if there are news...
             if (currentDeltaSize > 0) {
                 console.log("End of csv file import. Creating branch execution summary...")
+
                 saveBatch(currentLastEventId, currentDeltaSize)
             } else {
                 console.log("End of csv file import. No news")
             }
         })
 
-    res.json({ message: "Data imported successfully." })
+    res.json({ message: "CSV imported successfully." })
 });
 
 
-async function findLastBatch () {
-    const batch = await Batch.findOne({}).sort({_id:-1}).limit(1)
+async function getCsvFileLastCases(lastNlines) {
+
+    // Downdloads and saves a local copy
+    const csvFileAllCases = path.resolve(__dirname, "../tmp/Covid19Casos.csv");
+    //await https.get("https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv", function(response) {
+    //    console.log('Downloading csv file...')
+    //    response.pipe(fs.createWriteStream(csvFileAllCases))
+    //})
+
+    const csvFileLastCases = path.resolve(__dirname, "../tmp/LastCovid19Casos.csv")
+
+    // CSV Headers
+    const csvHeaders = await firstline(csvFileAllCases)
+    await fs.writeFile(csvFileLastCases, csvHeaders, 'utf8', (err) => {
+        if (err) throw err
+        console.log('Header saved!')
+    });
+
+    // Filtering last N lines from CSV huge file.
+    const bodyLines = await readLastLines.read(csvFileAllCases, lastNlines)
+        .then(function (lines) {
+            return lines
+        }).catch(function (err) {
+            console.log(err.message)
+            throw err
+        });
+
+    // Creating a new file with last N updates
+    await fs.appendFile(csvFileLastCases, bodyLines, 'utf8', (err) => {
+        if (err) throw err
+
+        console.log('"Last ' + lastNlines + ' occurences" file saved!')
+    });
+
+    return csvFileLastCases
+}
+
+
+async function findLastBatch() {
+    // Retrieves last generated Batch
+    const batch = await Batch.findOne({}).sort({ _id: -1 }).limit(1)
     return batch
 }
 
 
-async function saveOccurence (row) {
+async function saveOccurence(row) {
     var occurrence = new Occurrence({
         eventId: row[EVENT_ID],
         genre: row[GENRE],
@@ -200,12 +212,12 @@ async function saveOccurence (row) {
         if (error) {
             throw error;
         }
-        console.log('Occurrence saved successfully: ' + occurrence);
+        console.log('Occurrence saved successfully. EventId: ' + occurrence.eventId);
     });
 }
 
 
-async function saveBatch (currentLastEventId, currentDeltaSize) {
+async function saveBatch(currentLastEventId, currentDeltaSize) {
     var batch = new Batch({
         executionDate: new Date(),
         lastEventId: currentLastEventId,
@@ -216,7 +228,7 @@ async function saveBatch (currentLastEventId, currentDeltaSize) {
         if (error) {
             throw error;
         }
-        console.log('Batch saved successfully: ' + batch);
+        console.log('Batch saved successfully. LastEventId: ' + batch.lastEventId + ' - DeltaSize: ' + batch.deltaSize);
     });
 }
 

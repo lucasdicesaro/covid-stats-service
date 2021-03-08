@@ -14,7 +14,7 @@ This API provides useful stats about COVID.
 - csv-parser
 - https
 - firstline
-- read-last-line
+- read-last-lines@1.8.0
 - string-sanitizer
 - dotenv (just for dev)
 - nodemon (just for dev)
