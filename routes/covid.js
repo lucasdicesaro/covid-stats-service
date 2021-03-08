@@ -3,8 +3,13 @@ const router = express.Router();
 const Occurrence = require("../models/occurrence");
 const Batch = require("../models/batch");
 const fs = require("fs");
+const https = require('https');
 const csv = require('csv-parser');
 const path = require("path");
+const firstline = require('firstline');
+const readLastLine = require('read-last-line');
+const stringSanitizer = require("string-sanitizer");
+
 
 const EVENT_ID = "id_evento_caso"
 const GENRE = "sexo"
@@ -12,7 +17,6 @@ const AGE = "edad"
 const STATE = "residencia_provincia_nombre"
 const SYMPTOM_DATE = "fecha_inicio_sintomas"
 const DECEASE = "fallecido"
-
 
 
 router.get("/total", async (req, res) => {
@@ -80,46 +84,106 @@ router.get("/deaths", async (req, res) => {
 });
 
 router.get("/update", async (req, res) => {
-    const batch = await Batch.find({}).sort({_id:-1}).limit(1)
+    const batch = await findLastBatch()
     res.json(batch)
 });
 
 
-router.post("/update", (req, res) => {
+router.post("/update", async (req, res) => {
 
-    // TODO Replace this mock file with downloaded file from salud.gov.ar 
-    const csvfile = path.resolve(__dirname, "../Random5Covid19Casos.csv");
+    // TODO Remove this line and uncomment next block
+    const csvfileAllCases = path.resolve(__dirname, "../tmp/Last50Covid19Casos.csv")
 
-    // TODO First time, truncate last 1000 occurences.
-    // TODO Retrieve last Batch and get lastEventId value, in order to use it to filter news
+    // Downdloads and saves a local copy
+    //const csvfileAllCases = path.resolve(__dirname, "../tmp/Covid19Casos.csv");
+    // TODO Uncomment to download remote csv. Try it with await
+    //const request = https.get("https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv", function(response) {
+    //    console.log('Downloading csv file...')
+    //    response.pipe(fs.createWriteStream(csvfileAllCases))
+    //})
+
+    const csvfileLastCases = path.resolve(__dirname, "../tmp/LastCovid19Casos.csv")
+
+    // CSV Headers
+    const csvHeaders = await firstline(csvfileAllCases)
+    //console.log(csvHeaders);
+    await fs.writeFile(csvfileLastCases, csvHeaders, 'utf8', (err) => {
+        if (err) throw err
+        console.log('Header saved!')
+    });
+
+    // Truncates last N lines.
+    const lastNlines = 20
+    // TODO This is breaking file encoding. Change this solution
+    const lines = await readLastLine.read(csvfileAllCases, lastNlines).then(function (lines) {
+        return lines
+    }).catch(function (err) {
+        console.log(err.message)
+    });
+    //console.log(lines)
+    await fs.appendFile(csvfileLastCases, lines, 'utf8', (err) => {
+        if (err) throw err
+
+        console.log('Last-occurences-file saved!')
+    });
+
+    // Find is a previous Batch exists
+    const batch = await findLastBatch()
+    let previousLastEventId = null
+    if (batch != null) {
+        previousLastEventId = batch.lastEventId
+        console.log('Previous batch execution found - previousLastEventId: ' + previousLastEventId)
+    } else {
+        console.log('Batch execution not found. First execution')
+    }
 
     let currentLastEventId
     let currentDeltaSize = 0
 
-    fs.createReadStream(csvfile)
+    // Saves only news to database
+    fs.createReadStream(csvfileLastCases)
         .on('error', () => {
-            // handle error
             console.error(error.message)
         })
         .pipe(csv())
         .on('data', (row) => {
             //console.log(row);
-            saveOccurence(row)
+            const currentEventId = stringSanitizer.sanitize(row[EVENT_ID])
+            row[EVENT_ID] = currentEventId
 
-            // Save last processed EventId
-            currentLastEventId=row[EVENT_ID]
-            // Count processed records
-            currentDeltaSize++;
+            if (currentEventId == '') return; // Ignoring empty rows...
+
+            // Check only greater eventId's
+            if (previousLastEventId == null || currentEventId > previousLastEventId) {
+                console.log('EventId: ' + currentEventId + ' not processed yet. Inserting row...')
+                saveOccurence(row)
+
+                // Save last processed EventId
+                currentLastEventId=currentEventId
+                // Count processed records
+                currentDeltaSize++
+            } else {
+                console.log('EventId: [' + currentEventId + '] already processed. previousLastEventId: ' + previousLastEventId + '. Ignoring row...')
+            }
         })
         .on('end', () => {
-            // handle end of CSV
-            console.log("End of csv file import. Creating news summary...");
-            saveBatch(currentLastEventId, currentDeltaSize)
+            // Only if there are news...
+            if (currentDeltaSize > 0) {
+                console.log("End of csv file import. Creating branch execution summary...")
+                saveBatch(currentLastEventId, currentDeltaSize)
+            } else {
+                console.log("End of csv file import. No news")
+            }
         })
 
-    res.json({ message: "Data imported successfully." });
+    res.json({ message: "Data imported successfully." })
 });
 
+
+async function findLastBatch () {
+    const batch = await Batch.findOne({}).sort({_id:-1}).limit(1)
+    return batch
+}
 
 
 async function saveOccurence (row) {
@@ -155,5 +219,6 @@ async function saveBatch (currentLastEventId, currentDeltaSize) {
         console.log('Batch saved successfully: ' + batch);
     });
 }
+
 
 module.exports = router;

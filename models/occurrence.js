@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const occurrenceSchema = new mongoose.Schema({
     symptomDate: {
         type: Date,
-        required: true
+        required: false // some rows has empty symptomDate
     },
     eventId: {
         type: Number,

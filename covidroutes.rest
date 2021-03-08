@@ -9,5 +9,5 @@ GET http://localhost:3000/covid/deaths
 GET http://localhost:3000/covid/update
 
 ###
-
+# Create /tmp folder in project root
 POST http://localhost:3000/covid/update

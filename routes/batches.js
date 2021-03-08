@@ -27,11 +27,30 @@ router.post('/', async (req, res) => {
     }
 })
 
+// Updating batch
+router.patch("/one/:id", getBatch, async (req, res) => {
+    if (req.body.executionDate != null) {
+        res.batch.executionDate = req.body.executionDate;
+    }
+    if (req.body.lastEventId != null) {
+        res.batch.lastEventId = req.body.lastEventId;
+    }
+    if (req.body.deltaSize != null) {
+        res.batch.deltaSize = req.body.deltaSize;
+    }
+    try {
+        const updatedBatch = await res.batch.save();
+        res.json(updatedBatch);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+})
+
 // Delete batch
 router.delete('/one/:id', getBatch, async (req, res) => {
     try {
         await res.batch.remove()
-        res.json({ message: 'Batch deleted'})
+        res.json({ message: 'Batch deleted' })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }
@@ -41,7 +60,7 @@ router.delete('/one/:id', getBatch, async (req, res) => {
 router.delete('/all', async (req, res) => {
     try {
         await Batch.deleteMany({})
-        res.json({ message: 'Batches deleted'})
+        res.json({ message: 'Batches deleted' })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }

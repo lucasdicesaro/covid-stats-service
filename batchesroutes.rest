@@ -10,6 +10,14 @@ Content-Type: application/json
     "lastEventId": 998584,
     "deltaSize": 40
 }
+###
+
+PATCH http://localhost:3000/batches/one/6045c8eca564493a750ad623
+Content-Type: application/json
+
+{
+    "lastEventId": 999997
+}
 
 ###
 

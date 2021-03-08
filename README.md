@@ -12,6 +12,10 @@ This API provides useful stats about COVID.
 - express
 - mongoose
 - csv-parser
+- https
+- firstline
+- read-last-line
+- string-sanitizer
 - dotenv (just for dev)
 - nodemon (just for dev)
 

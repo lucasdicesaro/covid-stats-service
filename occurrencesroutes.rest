@@ -16,7 +16,7 @@ Content-Type: application/json
 
 ###
 
-DELETE http://localhost:3000/occurrences/one/6043c4e7004d7938f7434dd1
+DELETE http://localhost:3000/occurrences/one/6045c8eca564493a750ad622
 
 ###
 
