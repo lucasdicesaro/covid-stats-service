@@ -107,6 +107,7 @@ router.post("/update", async (req, res) => {
 
     let currentLastEventId
     let currentDeltaSize = 0
+    let ignoredRows = 0
 
     // Saves only news to database
     fs.createReadStream(csvFileLastCases)
@@ -114,7 +115,7 @@ router.post("/update", async (req, res) => {
             console.error(err.message)
         })
         .pipe(csv())
-        .on('data', (row) => {
+        .on('data', async (row) => {
 
             // Fixes Mongoose Nan validation on perstist. Error message:
             // 'CastError: Cast to Number failed for value "\n"999975"" at path "eventId"'
@@ -128,22 +129,24 @@ router.post("/update", async (req, res) => {
                 console.log('EventId: [' + currentEventId + '] not processed yet. Inserting row...')
 
                 // Persist Occurrence
-                saveOccurence(row)
+                await saveOccurence(row)
 
                 // Keep last EventId
                 currentLastEventId = currentEventId
                 // Count processed records
                 currentDeltaSize++
             } else {
-                console.log('EventId: [' + currentEventId + '] already processed. previousLastEventId: [' + previousLastEventId + ']. Ignoring row...')
+                //console.log('EventId: [' + currentEventId + '] already processed. previousLastEventId: [' + previousLastEventId + ']. Ignoring row...')
+                ignoredRows++
             }
         })
-        .on('end', () => {
-            // Only if there are news...
-            if (currentDeltaSize > 0) {
-                console.log("End of csv file import. Creating branch execution summary...")
+        .on('end', async () => {
+            console.log('Ignored (previously processed) rows: ' + ignoredRows)
 
-                saveBatch(currentLastEventId, currentDeltaSize)
+            if (currentDeltaSize > 0) { // Only if there are news...
+                console.log("End of csv file import. Creating Batch execution summary...")
+
+                await saveBatch(currentLastEventId, currentDeltaSize)
             } else {
                 console.log("End of csv file import. No news")
             }
@@ -164,15 +167,18 @@ async function getCsvFileLastCases(lastNlines) {
 
     const csvFileLastCases = path.resolve(__dirname, "../tmp/LastCovid19Casos.csv")
 
+    console.log('Building CSV file with last ' + lastNlines + ' occurrences...')
+
     // CSV Headers
     const csvHeaders = await firstline(csvFileAllCases)
     await fs.writeFile(csvFileLastCases, csvHeaders, 'utf8', (err) => {
         if (err) throw err
-        console.log('Header saved!')
-    });
+
+        console.log('CSV header saved!')
+    })
 
     // Filtering last N lines from CSV huge file.
-    const bodyLines = await readLastLines.read(csvFileAllCases, lastNlines)
+    const csvBodyLines = await readLastLines.read(csvFileAllCases, lastNlines)
         .then(function (lines) {
             return lines
         }).catch(function (err) {
@@ -181,10 +187,10 @@ async function getCsvFileLastCases(lastNlines) {
         });
 
     // Creating a new file with last N updates
-    await fs.appendFile(csvFileLastCases, bodyLines, 'utf8', (err) => {
+    await fs.appendFile(csvFileLastCases, csvBodyLines, 'utf8', (err) => {
         if (err) throw err
 
-        console.log('"Last ' + lastNlines + ' occurences" file saved!')
+        console.log('CSV body saved!')
     });
 
     return csvFileLastCases
