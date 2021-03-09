@@ -51,6 +51,20 @@ router.get("/update", async (req, res) => {
 
 
 router.post("/update", async (req, res) => {
+    (async () => {
+        await initBatchUpdate();
+    })();
+
+    let date = new Date()
+    let offset = date.getTimezoneOffset()
+    date = new Date(date.getTime() - (offset * 60 * 1000))
+
+    res.json({ message: "Batch update started at " + date.toISOString() + "..." })
+});
+
+
+
+async function initBatchUpdate() {
 
     try {
         const lastNlines = 1000
@@ -115,11 +129,12 @@ router.post("/update", async (req, res) => {
                 }
             })
 
-        res.json({ message: "CSV imported successfully." })
     } catch (err) {
-        res.status(500).json({ message: err.message })
+        console.log('Error while executing Batch update: ' + err.message)
+        throw err
     }
-});
+}
+
 
 
 async function getCsvFileLastCases(lastNlines) {
