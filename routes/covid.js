@@ -23,9 +23,10 @@ const appendFileAsync = promisify(fs.appendFile)
 
 router.get("/total", async (req, res) => {
     try {
-        const count = await findOccurrences(req)
+        const count = await countOccurrences(req)
         res.json(count)
     } catch (err) {
+        console.log(error.message)
         res.status(500).json({ message: err.message })
     }
 })
@@ -33,9 +34,10 @@ router.get("/total", async (req, res) => {
 router.get("/deaths", async (req, res) => {
     try {
         const deceased = 'SI'
-        const count = await findOccurrences(req, deceased)
+        const count = await countOccurrences(req, deceased)
         res.json(count)
     } catch (err) {
+        console.log(error.message)
         res.status(500).json({ message: err.message })
     }
 })
@@ -45,6 +47,7 @@ router.get("/update", async (req, res) => {
         const batch = await findLastBatch()
         res.json(batch)
     } catch (err) {
+        console.log(error.message)
         res.status(500).json({ message: err.message })
     }
 });
@@ -236,7 +239,7 @@ async function saveBatch(currentLastEventId, currentDeltaSize) {
 }
 
 
-async function findOccurrences(req, deceased) {
+async function countOccurrences(req, deceased) {
     const query = Occurrence.countDocuments();
 
     if (req.query.symptomDateFrom != null) {

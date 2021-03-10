@@ -13,6 +13,7 @@ This API provides useful stats about COVID.
 - mongoose
 - csv-parser
 - https
+- cors
 - firstline
 - read-last-lines@1.8.0
 - string-sanitizer
