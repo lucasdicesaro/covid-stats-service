@@ -242,22 +242,22 @@ async function saveBatch(currentLastEventId, currentDeltaSize) {
 async function countOccurrences(req, deceased) {
     const query = Occurrence.countDocuments();
 
-    if (req.query.symptomDateFrom != null) {
+    if (req.query.symptomDateFrom) {
         query.where('symptomDate').gte(req.query.symptomDateFrom);
     }
-    if (req.query.symptomDateTo != null) {
+    if (req.query.symptomDateTo) {
         query.where('symptomDate').lte(req.query.symptomDateTo);
     }
-    if (req.query.ageFrom != null) {
+    if (req.query.ageFrom) {
         query.where('age').gte(req.query.ageFrom);
     }
-    if (req.query.ageTo != null) {
+    if (req.query.ageTo) {
         query.where('age').lte(req.query.ageTo);
     }
-    if (req.query.genre != null) {
+    if (req.query.genre) {
         query.where('genre').equals(req.query.genre);
     }
-    if (req.query.state != null) {
+    if (req.query.state) {
         query.where('state').equals(req.query.state);
     }
     if (deceased) {
