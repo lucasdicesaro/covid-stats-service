@@ -26,6 +26,8 @@ A .env file must be created in root folder with database connection.
 ```
 DATABASE_HOST=mongodb://localhost/covid_stats_db
 ```
+Also a `tmp` folder must be created in the root folder for temporary files handling.
+
 Startup the server
 ```shell
 npm run devStart
